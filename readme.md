@@ -47,7 +47,7 @@ bool exists(Virus::id_type const &id) const;
 // Zwraca referencję do obiektu reprezentującego wirus o podanym
 // identyfikatorze.
 // Zgłasza wyjątek VirusNotFound, jeśli żądany wirus nie istnieje.
-Virus& operator[](Virus::id_type const &id) const;
+const Virus& operator[](Virus::id_type const &id) const;
 
 // Tworzy węzeł reprezentujący nowy wirus o identyfikatorze id
 // powstały z wirusów o podanym identyfikatorze parent_id lub
