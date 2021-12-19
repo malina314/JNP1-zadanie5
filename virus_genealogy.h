@@ -34,7 +34,6 @@ private:
     typename Virus::id_type stem_id;
 
 public:
-//    using children_iterator = typename std::set<std::shared_ptr<Virus>>::iterator;
     class children_iterator {
     private:
         typename std::set<std::shared_ptr<Virus>>::iterator it;
@@ -75,9 +74,6 @@ public:
             return *it;
         }
 
-//        auto operator<=>(const children_iterator &other) {
-//            return it <=> other.it;
-//        }
         bool operator==(const children_iterator &other) const {
             return it == other.it;
         }
@@ -104,7 +100,6 @@ public:
     VirusGenealogy<Virus>::children_iterator get_children_begin(typename Virus::id_type const &id) const {
         if (!exists(id))
             throw VirusNotFound();
-//        return **nodes[id]->childs.begin();
         return children_iterator(nodes.find(id)->second->childs.begin());
     }
 
@@ -113,7 +108,6 @@ public:
     VirusGenealogy<Virus>::children_iterator get_children_end(typename Virus::id_type const &id) const {
         if (!exists(id))
             throw VirusNotFound();
-//        return **nodes.find(id)->second->childs.end();
         return children_iterator(nodes.find(id)->second->childs.end());
     }
 
