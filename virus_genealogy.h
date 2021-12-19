@@ -1,9 +1,10 @@
+#ifndef VIRUS_GENEALOGY_H
+#define VIRUS_GENEALOGY_H
+
 #include <memory>
 #include <set>
 #include <map>
 #include <vector>
-
-#include <iostream>
 
 class VirusNotFound : public std::exception {
 public:
@@ -41,12 +42,16 @@ public:
         typename std::set<std::shared_ptr<Virus>>::iterator it;
 
     public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = Virus;
+        using iterator_category = std::bidirectional_iterator_tag;
+
         explicit children_iterator() = default;
 
         explicit children_iterator(typename std::set<std::shared_ptr<Virus>>::iterator it)
                 : it(it) {}
 
-        children_iterator operator++() {
+        children_iterator& operator++() {
             ++it;
             return *this;
         }
@@ -57,7 +62,7 @@ public:
             return buf;
         }
 
-        children_iterator operator--() {
+        children_iterator& operator--() {
             --it;
             return *this;
         }
@@ -68,7 +73,7 @@ public:
             return buf;
         }
 
-        Virus &operator*() const {
+        const Virus &operator*() const {
             return **it;
         }
 
@@ -90,6 +95,10 @@ public:
     explicit VirusGenealogy(typename Virus::id_type const &stem_id) :
     nodes{{stem_id, std::make_shared<VirusNode>(stem_id)}},
     stem_id(stem_id) {}
+
+    VirusGenealogy(VirusGenealogy& other) = delete;
+
+    VirusGenealogy& operator=(VirusGenealogy& other) = delete;
 
     // Zwraca identyfikator wirusa macierzystego.
     typename Virus::id_type get_stem_id() const {return stem_id;}
@@ -193,14 +202,8 @@ public:
         
         if (child_it == nodes.end() || parent_it == nodes.end())
             throw VirusNotFound();
-        VirusNode& child = *child_it->second, parent = *parent_it->second;
-        std::cerr << "p" << parent.childs.size() << "\n";
-        debug();
-        parent.childs.insert(child.ptr);
-        parent_it->second->childs.insert(child.ptr);
-        std::cerr << "p" << parent.childs.size() << "\n";
-        debug();
-        child.parents.insert(parent.ptr);
+        parent_it->second->childs.insert(child_it->second->ptr);
+        child_it->second->parents.insert(parent_it->second->ptr);
     };
 
     // Usuwa wirus o podanym identyfikatorze.
@@ -215,10 +218,6 @@ public:
         auto virus_it = nodes[id];
         for (auto child : virus_it->childs) {
             nodes[child->get_id()]->parents.erase(virus_it->ptr);
-
-            std::cerr << id << " " << child->get_id() << " " << nodes[child->get_id()]->parents.size() << "\n";
-            std::cerr << nodes["B"]->childs.size() << "\n";
-
             if (nodes[child->get_id()]->parents.size() == 0) {
                 remove(child->get_id());
             }
@@ -228,8 +227,6 @@ public:
         }
         nodes.erase(id);
     }
-
-    void debug() {
-        std::cerr << "B childs size = " << nodes["B"]->childs.size() << "\n";
-    }
 };
+
+#endif // VIRUS_GENEALOGY_H
