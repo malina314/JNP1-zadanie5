@@ -3,6 +3,8 @@
 #include <map>
 #include <vector>
 
+#include <iostream>
+
 class VirusNotFound : public std::exception {
 public:
     virtual const char* what() const noexcept {return "VirusNotFound\n";}
@@ -190,9 +192,14 @@ public:
                                    parent_it = nodes.find(parent_id);
         
         if (child_it == nodes.end() || parent_it == nodes.end())
-            throw VirusAlreadyCreated();
+            throw VirusNotFound();
         VirusNode& child = *child_it->second, parent = *parent_it->second;
+        std::cerr << "p" << parent.childs.size() << "\n";
+        debug();
         parent.childs.insert(child.ptr);
+        parent_it->second->childs.insert(child.ptr);
+        std::cerr << "p" << parent.childs.size() << "\n";
+        debug();
         child.parents.insert(parent.ptr);
     };
 
@@ -207,7 +214,12 @@ public:
             throw TriedToRemoveStemVirus();
         auto virus_it = nodes[id];
         for (auto child : virus_it->childs) {
-            if (nodes[child->get_id()]->parents.size() == 1) {
+            nodes[child->get_id()]->parents.erase(virus_it->ptr);
+
+            std::cerr << id << " " << child->get_id() << " " << nodes[child->get_id()]->parents.size() << "\n";
+            std::cerr << nodes["B"]->childs.size() << "\n";
+
+            if (nodes[child->get_id()]->parents.size() == 0) {
                 remove(child->get_id());
             }
         }
@@ -215,5 +227,9 @@ public:
             nodes[parent->get_id()]->childs.erase(virus_it->ptr);
         }
         nodes.erase(id);
+    }
+
+    void debug() {
+        std::cerr << "B childs size = " << nodes["B"]->childs.size() << "\n";
     }
 };
