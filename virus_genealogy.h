@@ -8,26 +8,28 @@
 
 class VirusNotFound : public std::exception {
 public:
-    virtual const char* what() const noexcept {return "VirusNotFound\n";}
+    virtual const char* what() const noexcept {return "VirusNotFound";}
 };
 
 class VirusAlreadyCreated : public std::exception {
 public:
-    virtual const char* what() const noexcept {return "VirusAlreadyCreated\n";}
+    virtual const char* what() const noexcept {return "VirusAlreadyCreated";}
 };
 
 class TriedToRemoveStemVirus : public std::exception {
 public:
-    virtual const char* what() const noexcept {return "TriedToRemoveStemVirus\n";}
+    virtual const char* what() const noexcept {return "TriedToRemoveStemVirus";}
 };
 
 template<typename Virus>
 class VirusGenealogy {
 private:
+    using viruses_set = std::set<std::shared_ptr<Virus>>;
+
     struct VirusNode {
         std::shared_ptr<Virus> ptr;
-        std::set<std::shared_ptr<Virus>> childs;
-        std::set<std::shared_ptr<Virus>> parents;
+        viruses_set childs;
+        viruses_set parents;
 
         explicit VirusNode(typename Virus::id_type id) : ptr(std::make_shared<Virus>(id)) {}
     };
@@ -39,7 +41,7 @@ private:
 public:
     class children_iterator {
     private:
-        typename std::set<std::shared_ptr<Virus>>::iterator it;
+        typename viruses_set::iterator it;
 
     public:
         using difference_type = std::ptrdiff_t;
@@ -48,7 +50,7 @@ public:
 
         explicit children_iterator() = default;
 
-        explicit children_iterator(typename std::set<std::shared_ptr<Virus>>::iterator it)
+        explicit children_iterator(typename viruses_set::iterator it)
                 : it(it) {}
 
         children_iterator& operator++() {
@@ -96,9 +98,9 @@ public:
     nodes{{stem_id, std::make_shared<VirusNode>(stem_id)}},
     stem_id(stem_id) {}
 
-    VirusGenealogy(VirusGenealogy& other) = delete;
+    VirusGenealogy(const VirusGenealogy& other) = delete;
 
-    VirusGenealogy& operator=(VirusGenealogy& other) = delete;
+    VirusGenealogy& operator=(const VirusGenealogy& other) = delete;
 
     // Zwraca identyfikator wirusa macierzystego.
     typename Virus::id_type get_stem_id() const {return stem_id;}
@@ -177,20 +179,21 @@ public:
         typename nodes_t::iterator child_it = nodes.find(id);
         if (child_it != nodes.end())
             throw VirusAlreadyCreated();
-
-        std::vector<typename nodes_t::iterator> parent_its;
-        for (const typename Virus::id_type &parent_id : parent_ids) {
-            typename nodes_t::iterator parent_it = nodes.find(parent_id);
-            if (parent_it == nodes.end())
-                throw VirusNotFound();
-            parent_its.push_back(parent_it);
-        }
-        VirusNode& child = *nodes.insert({id, std::make_shared<VirusNode>(id)})
-                           .first->second;
-        for (typename nodes_t::iterator parent_it : parent_its) {
-            VirusNode& parent = *parent_it->second;
-            parent.childs.insert(child.ptr);
-            child.parents.insert(parent.ptr);
+        if (!parent_ids.empty()) {
+            std::vector<typename nodes_t::iterator> parent_its;
+            for (const typename Virus::id_type &parent_id : parent_ids) {
+                typename nodes_t::iterator parent_it = nodes.find(parent_id);
+                if (parent_it == nodes.end())
+                    throw VirusNotFound();
+                parent_its.push_back(parent_it);
+            }
+            VirusNode& child = *nodes.insert({id, std::make_shared<VirusNode>(id)})
+                            .first->second;
+            for (typename nodes_t::iterator parent_it : parent_its) {
+                VirusNode& parent = *parent_it->second;
+                parent.childs.insert(child.ptr);
+                child.parents.insert(parent.ptr);
+            }
         }
     }; 
 
@@ -217,13 +220,19 @@ public:
             throw TriedToRemoveStemVirus();
         auto virus_it = nodes[id];
         for (auto child : virus_it->childs) {
-            nodes[child->get_id()]->parents.erase(virus_it->ptr);
-            if (nodes[child->get_id()]->parents.size() == 0) {
-                remove(child->get_id());
+            auto node = nodes.find(child->get_id());
+            if (node != nodes.end()) {
+                node->second->parents.erase(virus_it->ptr);
+                if (node->second->parents.size() == 0) {
+                    remove(child->get_id());
+                }
             }
         }
         for (auto parent : virus_it->parents) {
-            nodes[parent->get_id()]->childs.erase(virus_it->ptr);
+            auto node = nodes.find(parent->get_id());
+            if (node != nodes.end()) {
+                node->second->childs.erase(virus_it->ptr);
+            }
         }
         nodes.erase(id);
     }
